@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Universal Security Detector Dashboard</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #080c14;
+    --surface: #0d1520;
+    --surface2: #111d2e;
+    --border: #1a2d47;
+    --accent: #00d4ff;
+    --accent2: #0091ff;
+    --red: #ff3b5c;
+    --orange: #ff8800;
+    --yellow: #ffd234;
+    --green: #00e676;
+    --purple: #c084fc;
+    --text: #cfe3f7;
+    --muted: #4a6a8a;
+    --critical: #ff3b5c;
+    --high: #ff8800;
+    --medium: #c084fc;
+    --low: #00d4ff;
+    --info: #4a6a8a;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'JetBrains Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container { position: relative; z-index: 1; max-width: 1400px; margin: 0 auto; padding: 24px; }
+
+  /* Header */
+  .header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .logo-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent2), var(--accent));
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px;
+    box-shadow: 0 0 24px rgba(0,212,255,0.3);
+    animation: pulse-glow 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 24px rgba(0,212,255,0.3); }
+    50% { box-shadow: 0 0 40px rgba(0,212,255,0.5), 0 0 60px rgba(0,144,255,0.2); }
+  }
+
+  .logo-text h1 {
+    font-family: 'Syne', sans-serif;
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+
+  .logo-text p { font-size: 11px; color: var(--muted); letter-spacing: 0.1em; }
+
+  .header-meta { text-align: right; font-size: 11px; color: var(--muted); }
+  .header-meta .live-badge {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(0,230,118,0.1); border: 1px solid rgba(0,230,118,0.3);
+    color: var(--green); padding: 4px 10px; border-radius: 20px;
+    font-size: 10px; letter-spacing: 0.1em; margin-bottom: 8px;
+  }
+  .live-dot { width: 6px; height: 6px; background: var(--green); border-radius: 50%; animation: blink 1.2s ease-in-out infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+  /* App Info Bar */
+  .app-info {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 24px;
+    display: flex;
+    gap: 40px;
+    align-items: center;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
+  }
+  .info-item { display: flex; flex-direction: column; gap: 2px; }
+  .info-label { font-size: 9px; letter-spacing: 0.15em; color: var(--muted); text-transform: uppercase; }
+  .info-value { font-size: 13px; font-weight: 500; color: var(--text); }
+  .platform-badge {
+    padding: 3px 10px; border-radius: 6px; font-size: 11px; font-weight: 700;
+    letter-spacing: 0.05em;
+  }
+  .android { background: rgba(61,220,132,0.15); color: #3ddc84; border: 1px solid rgba(61,220,132,0.3); }
+  .ios { background: rgba(0,212,255,0.15); color: var(--accent); border: 1px solid rgba(0,212,255,0.3); }
+
+  /* Risk Meter */
+  .risk-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+    margin-bottom: 24px;
+    display: flex;
+    gap: 32px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .risk-gauge {
+    position: relative;
+    width: 120px; height: 120px;
+    flex-shrink: 0;
+  }
+
+  .risk-gauge svg { transform: rotate(-90deg); }
+
+  .risk-gauge-center {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Syne', sans-serif;
+  }
+
+  .risk-score { font-size: 28px; font-weight: 800; }
+  .risk-label { font-size: 9px; color: var(--muted); letter-spacing: 0.1em; }
+
+  .severity-bars { display: flex; flex-direction: column; gap: 10px; flex: 1; min-width: 200px; }
+
+  .sev-bar { display: flex; align-items: center; gap: 12px; }
+  .sev-name { font-size: 10px; letter-spacing: 0.08em; color: var(--muted); width: 60px; text-transform: uppercase; }
+  .sev-track { flex: 1; height: 6px; background: rgba(255,255,255,0.05); border-radius: 3px; overflow: hidden; }
+  .sev-fill { height: 100%; border-radius: 3px; transition: width 1s ease; }
+  .sev-count { font-size: 12px; font-weight: 700; width: 24px; text-align: right; }
+
+  /* Quick Stats */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px;
+    transition: border-color 0.2s, transform 0.2s;
+    cursor: pointer;
+  }
+  .stat-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+  .stat-card.detected { border-color: rgba(255,59,92,0.4); background: rgba(255,59,92,0.05); }
+  .stat-card.detected:hover { border-color: var(--red); }
+
+  .stat-icon { font-size: 20px; margin-bottom: 8px; }
+  .stat-name { font-size: 10px; color: var(--muted); letter-spacing: 0.05em; margin-bottom: 6px; text-transform: uppercase; }
+  .stat-status {
+    display: inline-flex; align-items: center; gap: 6px;
+    font-size: 11px; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .status-dot { width: 7px; height: 7px; border-radius: 50%; }
+  .status-dot.detected { background: var(--red); box-shadow: 0 0 8px var(--red); animation: pulse-red 1.5s ease infinite; }
+  .status-dot.clear { background: var(--muted); }
+  @keyframes pulse-red { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+  .stat-sev {
+    font-size: 9px; margin-top: 4px; padding: 2px 6px; border-radius: 4px;
+    display: inline-block; letter-spacing: 0.08em;
+  }
+  .sev-CRITICAL { background: rgba(255,59,92,0.2); color: var(--critical); }
+  .sev-HIGH { background: rgba(255,136,0,0.2); color: var(--high); }
+  .sev-MEDIUM { background: rgba(192,132,252,0.2); color: var(--medium); }
+  .sev-LOW { background: rgba(0,212,255,0.15); color: var(--low); }
+  .sev-INFO { background: rgba(74,106,138,0.2); color: var(--info); }
+
+  /* Details Panel */
+  .details-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .panel-header {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--surface2);
+  }
+
+  .panel-title {
+    font-family: 'Syne', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: 0.05em;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .filter-tabs {
+    display: flex;
+    gap: 6px;
+  }
+
+  .tab {
+    padding: 4px 12px;
+    border-radius: 6px;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--muted);
+    transition: all 0.2s;
+  }
+  .tab:hover, .tab.active { background: rgba(0,212,255,0.1); border-color: var(--accent); color: var(--accent); }
+
+  .check-list { padding: 0; }
+
+  .check-item {
+    padding: 14px 24px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    transition: background 0.15s;
+    cursor: pointer;
+  }
+  .check-item:last-child { border-bottom: none; }
+  .check-item:hover { background: rgba(0,212,255,0.03); }
+  .check-item.expanded { background: var(--surface2); }
+
+  .check-sev-indicator {
+    width: 3px; height: 44px; border-radius: 2px; flex-shrink: 0; margin-top: 2px;
+  }
+
+  .check-main { flex: 1; }
+  .check-top { display: flex; align-items: center; gap: 12px; margin-bottom: 4px; flex-wrap: wrap; }
+  .check-name { font-size: 13px; font-weight: 500; }
+  .check-count {
+    font-size: 10px; color: var(--muted);
+    background: rgba(255,255,255,0.05);
+    padding: 1px 8px; border-radius: 10px;
+  }
+  .check-methods { font-size: 11px; color: var(--muted); }
+  .check-methods span { color: var(--accent); margin-right: 4px; }
+
+  .method-list {
+    margin-top: 12px;
+    padding: 12px;
+    background: rgba(0,0,0,0.3);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    display: none;
+  }
+  .check-item.expanded .method-list { display: block; }
+
+  .method-entry {
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 11px;
+  }
+  .method-entry:last-child { border-bottom: none; }
+  .method-name { color: var(--accent); margin-bottom: 2px; }
+  .method-detail { color: var(--muted); font-size: 10px; }
+  .method-time { color: var(--muted); font-size: 9px; opacity: 0.5; }
+
+  /* Commands Panel */
+  .commands {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .cmd-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+  @media (max-width: 700px) { .cmd-grid { grid-template-columns: 1fr; } }
+
+  .cmd-block {
+    padding: 20px 24px;
+    border-right: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .cmd-block:nth-child(2n) { border-right: none; }
+  .cmd-block:nth-last-child(-n+2) { border-bottom: none; }
+
+  .cmd-title { font-size: 10px; color: var(--accent); letter-spacing: 0.1em; margin-bottom: 10px; }
+  .cmd-line {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 11px;
+    color: var(--green);
+    margin-bottom: 6px;
+    position: relative;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .cmd-line:hover { border-color: var(--accent); }
+  .cmd-line::before { content: '$ '; color: var(--muted); }
+  .cmd-comment { font-size: 9px; color: var(--muted); margin-bottom: 10px; }
+
+  /* JSON Output */
+  .json-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+
+  .json-output {
+    padding: 20px 24px;
+    font-size: 11px;
+    line-height: 1.7;
+    color: var(--muted);
+    max-height: 300px;
+    overflow-y: auto;
+    white-space: pre;
+    font-family: 'JetBrains Mono', monospace;
+  }
+
+  .json-output::-webkit-scrollbar { width: 6px; }
+  .json-output::-webkit-scrollbar-track { background: transparent; }
+  .json-output::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  /* Footer */
+  .footer {
+    text-align: center;
+    padding: 24px 0;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.08em;
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+  }
+
+  /* Animations */
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate { animation: fade-in-up 0.5s ease forwards; }
+  .delay-1 { animation-delay: 0.1s; opacity: 0; }
+  .delay-2 { animation-delay: 0.2s; opacity: 0; }
+  .delay-3 { animation-delay: 0.3s; opacity: 0; }
+  .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+  /* Copy feedback */
+  .copied { color: var(--green) !important; }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header animate">
+    <div class="logo">
+      <div class="logo-icon">🛡</div>
+      <div class="logo-text">
+        <h1>MobileSecurityDetector</h1>
+        <p>UNIVERSAL FRIDA ANALYSIS FRAMEWORK</p>
+      </div>
+    </div>
+    <div class="header-meta">
+      <div class="live-badge"><span class="live-dot"></span> MONITORING ACTIVE</div>
+      <div id="scan-time">Session: 00:00</div>
+      <div id="hook-count">Hooks: 0 triggered</div>
+    </div>
+  </div>
+
+  <!-- APP INFO -->
+  <div class="app-info animate delay-1">
+    <div class="info-item">
+      <div class="info-label">Package</div>
+      <div class="info-value" id="pkg-name">com.target.application</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Platform</div>
+      <div class="info-value"><span class="platform-badge android" id="platform-badge">ANDROID</span></div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Version</div>
+      <div class="info-value" id="app-version">3.14.1</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Target SDK</div>
+      <div class="info-value" id="target-sdk">34</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Scan Started</div>
+      <div class="info-value" id="scan-started">—</div>
+    </div>
+    <div class="info-item">
+      <div class="info-label">Bypass Mode</div>
+      <div class="info-value" id="bypass-status" style="color: var(--muted)">Disabled</div>
+    </div>
+  </div>
+
+  <!-- RISK PANEL -->
+  <div class="risk-panel animate delay-2">
+    <div class="risk-gauge">
+      <svg width="120" height="120" viewBox="0 0 120 120">
+        <circle cx="60" cy="60" r="50" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="8"/>
+        <circle id="gauge-ring" cx="60" cy="60" r="50" fill="none" stroke="var(--red)"
+          stroke-width="8" stroke-linecap="round"
+          stroke-dasharray="314" stroke-dashoffset="157"
+          style="transition: stroke-dashoffset 1.2s ease, stroke 0.5s ease"/>
+      </svg>
+      <div class="risk-gauge-center">
+        <div class="risk-score" id="risk-score" style="color: var(--red)">7</div>
+        <div class="risk-label">CHECKS</div>
+      </div>
+    </div>
+
+    <div class="severity-bars">
+      <div class="sev-bar">
+        <div class="sev-name" style="color: var(--critical)">Critical</div>
+        <div class="sev-track"><div class="sev-fill" id="bar-critical" style="background: var(--critical); width: 0%"></div></div>
+        <div class="sev-count" id="count-critical" style="color: var(--critical)">0</div>
+      </div>
+      <div class="sev-bar">
+        <div class="sev-name" style="color: var(--high)">High</div>
+        <div class="sev-track"><div class="sev-fill" id="bar-high" style="background: var(--high); width: 0%"></div></div>
+        <div class="sev-count" id="count-high" style="color: var(--high)">0</div>
+      </div>
+      <div class="sev-bar">
+        <div class="sev-name" style="color: var(--medium)">Medium</div>
+        <div class="sev-track"><div class="sev-fill" id="bar-medium" style="background: var(--medium); width: 0%"></div></div>
+        <div class="sev-count" id="count-medium" style="color: var(--medium)">0</div>
+      </div>
+      <div class="sev-bar">
+        <div class="sev-name" style="color: var(--low)">Low</div>
+        <div class="sev-track"><div class="sev-fill" id="bar-low" style="background: var(--low); width: 0%"></div></div>
+        <div class="sev-count" id="count-low" style="color: var(--low)">0</div>
+      </div>
+      <div class="sev-bar">
+        <div class="sev-name" style="color: var(--info)">Info</div>
+        <div class="sev-track"><div class="sev-fill" id="bar-info" style="background: var(--info); width: 0%"></div></div>
+        <div class="sev-count" id="count-info" style="color: var(--info)">0</div>
+      </div>
+    </div>
+
+    <div style="flex: 1; min-width: 200px;">
+      <div style="font-family: 'Syne', sans-serif; font-size: 28px; font-weight: 800; color: var(--red)" id="risk-label">HIGH RISK</div>
+      <div style="font-size: 11px; color: var(--muted); margin-top: 4px;">Application implements multiple security controls</div>
+      <div style="margin-top: 16px; font-size: 11px; color: var(--muted);">
+        <span id="detected-count" style="color: var(--text); font-weight: 700;">7</span> of
+        <span id="total-count">15</span> security checks detected
+      </div>
+    </div>
+  </div>
+
+  <!-- STAT CARDS GRID -->
+  <div class="stats-grid animate delay-3" id="stats-grid">
+    <!-- Populated by JS -->
+  </div>
+
+  <!-- DETECTION DETAILS -->
+  <div class="details-panel animate delay-4">
+    <div class="panel-header">
+      <div class="panel-title">🔍 Detection Details</div>
+      <div class="filter-tabs">
+        <button class="tab active" onclick="filterChecks('all', this)">All</button>
+        <button class="tab" onclick="filterChecks('detected', this)">Detected</button>
+        <button class="tab" onclick="filterChecks('clear', this)">Clear</button>
+      </div>
+    </div>
+    <div class="check-list" id="check-list">
+      <!-- Populated by JS -->
+    </div>
+  </div>
+
+  <!-- COMMANDS -->
+  <div class="commands animate delay-4">
+    <div class="panel-header">
+      <div class="panel-title">⚡ Quick Commands</div>
+    </div>
+    <div class="cmd-grid">
+      <div class="cmd-block">
+        <div class="cmd-title">ATTACH & SPAWN</div>
+        <div class="cmd-line" onclick="copyCmd(this)">frida -U -f com.target.app -l universal_security_detector.js --no-pause</div>
+        <div class="cmd-comment">Spawn app and inject from the start</div>
+        <div class="cmd-line" onclick="copyCmd(this)">frida -U --attach-name com.target.app -l universal_security_detector.js</div>
+        <div class="cmd-comment">Attach to already running process</div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-title">BYPASS MODE</div>
+        <div class="cmd-line" onclick="copyCmd(this)">python3 security_detector.py -p com.target.app --bypass</div>
+        <div class="cmd-comment">Auto-bypass all detected security checks</div>
+        <div class="cmd-line" onclick="copyCmd(this)">python3 security_detector.py -p com.target.app -o report.json</div>
+        <div class="cmd-comment">Save full JSON report to file</div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-title">REMOTE DEVICE</div>
+        <div class="cmd-line" onclick="copyCmd(this)">frida -H 127.0.0.1:27042 -f com.target.app -l universal_security_detector.js</div>
+        <div class="cmd-comment">Connect to remote Frida server</div>
+        <div class="cmd-line" onclick="copyCmd(this)">adb forward tcp:27042 tcp:27042</div>
+        <div class="cmd-comment">Forward Frida port over ADB</div>
+      </div>
+      <div class="cmd-block">
+        <div class="cmd-title">FRIDA REPL CONTROL</div>
+        <div class="cmd-line" onclick="copyCmd(this)">rpc.exports.enable_bypass()</div>
+        <div class="cmd-comment">Enable bypass from Frida REPL at runtime</div>
+        <div class="cmd-line" onclick="copyCmd(this)">rpc.exports.get_report()</div>
+        <div class="cmd-comment">Fetch JSON report object from REPL</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- JSON PREVIEW -->
+  <div class="json-panel animate delay-4">
+    <div class="panel-header">
+      <div class="panel-title">📄 JSON Report Preview</div>
+      <button class="tab" onclick="copyJson()">Copy JSON</button>
+    </div>
+    <div class="json-output" id="json-output">Loading report...</div>
+  </div>
+
+  <div class="footer">
+    UNIVERSAL SECURITY DETECTOR v2.0 &nbsp;·&nbsp; Frida-based Analysis &nbsp;·&nbsp;
+    Supports Android & iOS &nbsp;·&nbsp; 15 Security Check Categories
+  </div>
+</div>
+
+<script>
+// ─── Mock report data (replace with actual Frida output) ──────────────────────
+const MOCK_REPORT = {
+  timestamp: new Date().toISOString(),
+  platform: "android",
+  appInfo: {
+    packageName: "com.example.app",
+    versionName: "4.2.1",
+    targetSdk: 34,
+    dataDir: "/data/data/com.example.app"
+  },
+  checks: {
+    ssl_pinning:           { detected: true,  severity: "CRITICAL", methods: [{ method: "OkHttp3.CertificatePinner.check", details: "host=api.example.com" }, { method: "NetworkSecurityTrustManager.checkPins", details: "Network Security Config" }] },
+    root_jailbreak:        { detected: true,  severity: "HIGH",     methods: [{ method: "File.exists()", details: "/system/bin/su" }, { method: "Runtime.exec()", details: "which su" }] },
+    anti_debug:            { detected: true,  severity: "HIGH",     methods: [{ method: "Debug.isDebuggerConnected()", details: "Debugger check" }, { method: "native ptrace()", details: "request=31" }] },
+    emulator_detection:    { detected: true,  severity: "MEDIUM",   methods: [{ method: "TelephonyManager.getDeviceId()", details: "IMEI check" }] },
+    integrity_check:       { detected: true,  severity: "HIGH",     methods: [{ method: "PackageManager.getPackageInfo(GET_SIGNATURES)", details: "pkg=com.example.app" }, { method: "Play Integrity API requestIntegrityToken()", details: "Play Integrity" }] },
+    certificate_auth:      { detected: true,  severity: "CRITICAL", methods: [{ method: "SSLContext.init(KeyManager)", details: "mTLS configured" }] },
+    biometric_auth:        { detected: true,  severity: "MEDIUM",   methods: [{ method: "BiometricPrompt.authenticate(cryptoObject)", details: "Biometric with crypto" }] },
+    obfuscation:           { detected: false, severity: "LOW",      methods: [] },
+    hook_detection:        { detected: true,  severity: "HIGH",     methods: [{ method: "/proc/self/maps exists", details: "Memory map scan" }] },
+    memory_integrity:      { detected: false, severity: "HIGH",     methods: [] },
+    network_security:      { detected: false, severity: "MEDIUM",   methods: [] },
+    crypto_operations:     { detected: true,  severity: "INFO",     methods: [{ method: "Cipher.getInstance()", details: "AES/GCM/NoPadding" }] },
+    keystore_usage:        { detected: true,  severity: "INFO",     methods: [{ method: "KeyGenParameterSpec.Builder()", details: "alias=auth_key" }] },
+    screenshot_prevention: { detected: true,  severity: "LOW",      methods: [{ method: "Window.setFlags(FLAG_SECURE)", details: "Screenshot blocked" }] },
+    clipboard_protection:  { detected: false, severity: "LOW",      methods: [] },
+  }
+};
+
+// ─── UI State ─────────────────────────────────────────────────────────────────
+let currentFilter = 'all';
+let expandedItems = new Set();
+let sessionStart = Date.now();
+let hookCount = 0;
+
+const SEV_COLORS = {
+  CRITICAL: 'var(--critical)', HIGH: 'var(--high)', MEDIUM: 'var(--medium)',
+  LOW: 'var(--low)', INFO: 'var(--info)'
+};
+
+const CHECK_ICONS = {
+  ssl_pinning: '🔒', root_jailbreak: '🔓', anti_debug: '🐛', emulator_detection: '📱',
+  integrity_check: '📦', certificate_auth: '📜', biometric_auth: '👆', obfuscation: '🎭',
+  hook_detection: '🪝', memory_integrity: '🧠', network_security: '🌐', crypto_operations: '🔐',
+  keystore_usage: '🗝', screenshot_prevention: '📸', clipboard_protection: '📋'
+};
+
+const CHECK_LABELS = {
+  ssl_pinning: 'SSL Pinning', root_jailbreak: 'Root / Jailbreak', anti_debug: 'Anti-Debug',
+  emulator_detection: 'Emulator Detection', integrity_check: 'Integrity Check',
+  certificate_auth: 'Certificate Auth', biometric_auth: 'Biometric Auth', obfuscation: 'Obfuscation',
+  hook_detection: 'Hook Detection', memory_integrity: 'Memory Integrity',
+  network_security: 'Network Security', crypto_operations: 'Crypto Operations',
+  keystore_usage: 'Keystore Usage', screenshot_prevention: 'Screenshot Prevention',
+  clipboard_protection: 'Clipboard Protection'
+};
+
+// ─── Render ───────────────────────────────────────────────────────────────────
+function renderAll(report) {
+  const { appInfo, platform, checks } = report;
+  const detected = Object.entries(checks).filter(([,v]) => v.detected);
+  const total = Object.keys(checks).length;
+
+  // App info
+  document.getElementById('pkg-name').textContent = appInfo.packageName || 'Unknown';
+  document.getElementById('app-version').textContent = appInfo.versionName || '?';
+  document.getElementById('target-sdk').textContent = appInfo.targetSdk || '?';
+  document.getElementById('scan-started').textContent = new Date(report.timestamp).toLocaleTimeString();
+
+  const badge = document.getElementById('platform-badge');
+  badge.textContent = (platform || 'unknown').toUpperCase();
+  badge.className = `platform-badge ${platform === 'ios' ? 'ios' : 'android'}`;
+
+  // Severity counts
+  const sevCounts = { CRITICAL: 0, HIGH: 0, MEDIUM: 0, LOW: 0, INFO: 0 };
+  detected.forEach(([,v]) => { if (sevCounts[v.severity] !== undefined) sevCounts[v.severity]++; });
+  const maxSev = Math.max(...Object.values(sevCounts), 1);
+
+  Object.entries(sevCounts).forEach(([sev, count]) => {
+    const barEl = document.getElementById(`bar-${sev.toLowerCase()}`);
+    const countEl = document.getElementById(`count-${sev.toLowerCase()}`);
+    if (barEl) barEl.style.width = `${(count / maxSev) * 100}%`;
+    if (countEl) countEl.textContent = count;
+  });
+
+  // Risk gauge
+  const score = detected.length;
+  const pct = score / total;
+  const circumference = 314;
+  const offset = circumference - (pct * circumference);
+  const gaugeRing = document.getElementById('gauge-ring');
+  gaugeRing.style.strokeDashoffset = offset;
+  const riskColor = pct > 0.6 ? 'var(--critical)' : pct > 0.35 ? 'var(--high)' : pct > 0.15 ? 'var(--medium)' : 'var(--green)';
+  gaugeRing.style.stroke = riskColor;
+  document.getElementById('risk-score').textContent = score;
+  document.getElementById('risk-score').style.color = riskColor;
+  document.getElementById('detected-count').textContent = score;
+  document.getElementById('total-count').textContent = total;
+
+  const riskLabelEl = document.getElementById('risk-label');
+  if (pct > 0.6) { riskLabelEl.textContent = 'HIGH RISK'; riskLabelEl.style.color = 'var(--critical)'; }
+  else if (pct > 0.35) { riskLabelEl.textContent = 'MEDIUM RISK'; riskLabelEl.style.color = 'var(--high)'; }
+  else if (pct > 0.1) { riskLabelEl.textContent = 'LOW RISK'; riskLabelEl.style.color = 'var(--medium)'; }
+  else { riskLabelEl.textContent = 'MINIMAL RISK'; riskLabelEl.style.color = 'var(--green)'; }
+
+  hookCount = detected.reduce((sum, [,v]) => sum + v.methods.length, 0);
+  document.getElementById('hook-count').textContent = `Hooks: ${hookCount} triggered`;
+
+  // Stat Cards
+  const grid = document.getElementById('stats-grid');
+  grid.innerHTML = '';
+  Object.entries(checks).forEach(([key, check]) => {
+    const card = document.createElement('div');
+    card.className = `stat-card ${check.detected ? 'detected' : ''}`;
+    card.onclick = () => {
+      document.getElementById('check-list').scrollIntoView({ behavior: 'smooth' });
+      setTimeout(() => toggleExpand(key), 300);
+    };
+    card.innerHTML = `
+      <div class="stat-icon">${CHECK_ICONS[key] || '🔍'}</div>
+      <div class="stat-name">${CHECK_LABELS[key]}</div>
+      <div class="stat-status">
+        <span class="status-dot ${check.detected ? 'detected' : 'clear'}"></span>
+        ${check.detected ? `<span style="color: ${SEV_COLORS[check.severity]}">Detected</span>` : '<span style="color: var(--muted)">Not detected</span>'}
+      </div>
+      <span class="stat-sev sev-${check.severity}">${check.severity}</span>
+    `;
+    grid.appendChild(card);
+  });
+
+  renderCheckList(checks);
+  renderJSON(report);
+}
+
+function renderCheckList(checks) {
+  const list = document.getElementById('check-list');
+  list.innerHTML = '';
+  Object.entries(checks).forEach(([key, check]) => {
+    if (currentFilter === 'detected' && !check.detected) return;
+    if (currentFilter === 'clear' && check.detected) return;
+
+    const item = document.createElement('div');
+    item.className = `check-item ${expandedItems.has(key) ? 'expanded' : ''}`;
+    item.id = `check-${key}`;
+
+    const methodsHTML = check.methods.map(m => `
+      <div class="method-entry">
+        <div class="method-name">${m.method}</div>
+        ${m.details ? `<div class="method-detail">→ ${m.details}</div>` : ''}
+        ${m.timestamp ? `<div class="method-time">${new Date(m.timestamp).toLocaleTimeString()}</div>` : ''}
+      </div>
+    `).join('');
+
+    item.innerHTML = `
+      <div class="check-sev-indicator" style="background: ${check.detected ? SEV_COLORS[check.severity] : 'var(--border)'}"></div>
+      <div class="check-main">
+        <div class="check-top">
+          <span class="check-name">${CHECK_ICONS[key]} ${CHECK_LABELS[key]}</span>
+          <span class="stat-sev sev-${check.severity}">${check.severity}</span>
+          ${check.detected ? `<span class="check-count">${check.methods.length} hits</span>` : ''}
+          ${check.detected ? `<span style="color: ${SEV_COLORS[check.severity]}; font-size: 10px;">● DETECTED</span>` : '<span style="color: var(--muted); font-size: 10px;">○ Clear</span>'}
+        </div>
+        ${check.detected && check.methods[0]
+          ? `<div class="check-methods"><span>via</span>${check.methods[0].method}</div>`
+          : '<div class="check-methods" style="color: var(--muted)">No triggers observed in this session</div>'
+        }
+        ${check.methods.length > 0 ? `<div class="method-list">${methodsHTML}</div>` : ''}
+      </div>
+    `;
+    item.addEventListener('click', () => toggleExpand(key));
+    list.appendChild(item);
+  });
+}
+
+function toggleExpand(key) {
+  if (expandedItems.has(key)) expandedItems.delete(key);
+  else expandedItems.add(key);
+  const item = document.getElementById(`check-${key}`);
+  if (item) item.classList.toggle('expanded');
+}
+
+function filterChecks(type, el) {
+  currentFilter = type;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  renderCheckList(MOCK_REPORT.checks);
+}
+
+function renderJSON(report) {
+  const el = document.getElementById('json-output');
+  const json = JSON.stringify(report, null, 2);
+  el.textContent = json;
+}
+
+function copyCmd(el) {
+  const text = el.textContent.replace(/^\$ /, '');
+  navigator.clipboard.writeText(text).then(() => {
+    const orig = el.style.color;
+    el.style.color = 'var(--green)';
+    el.textContent = '✓ Copied!';
+    setTimeout(() => { el.style.color = orig; el.textContent = text; }, 1500);
+  });
+}
+
+function copyJson() {
+  navigator.clipboard.writeText(JSON.stringify(MOCK_REPORT, null, 2));
+}
+
+// ─── Session Timer ────────────────────────────────────────────────────────────
+setInterval(() => {
+  const elapsed = Math.floor((Date.now() - sessionStart) / 1000);
+  const m = String(Math.floor(elapsed / 60)).padStart(2, '0');
+  const s = String(elapsed % 60).padStart(2, '0');
+  document.getElementById('scan-time').textContent = `Session: ${m}:${s}`;
+}, 1000);
+
+// ─── Init ─────────────────────────────────────────────────────────────────────
+renderAll(MOCK_REPORT);
+</script>
+</body>
+</html>
